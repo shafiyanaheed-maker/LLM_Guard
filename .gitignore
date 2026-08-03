@@ -1,2 +1,31 @@
-llm_guard.db
+# Python
+__pycache__/
+app/__pycache__/
+*.py[codz]
+*.pyc
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# Environment variables
+.env
+
+# Node.js
+node_modules/
+
+# Logs
 logs/
+*.log
+
+# Database
+llm_guard.db
+
+# IDE files
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
