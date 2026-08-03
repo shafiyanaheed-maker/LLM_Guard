@@ -1,0 +1,52 @@
+@import "tailwindcss";
+
+/* Light mode variant — applied when <html> has class "light" */
+@custom-variant light (&:where(.light, .light *));
+
+/* ============ LLM-Guard Premium Theme Tokens ============ */
+@theme {
+  /* Brand cyan */
+  --color-brand-400: #22d3ee;
+  --color-brand-500: #06b6d4;
+  --color-brand-600: #0891b2;
+
+  /* Glass */
+  --color-glass-bg: rgba(15, 23, 42, 0.55);
+  --color-glass-border: rgba(255, 255, 255, 0.1);
+  --color-glass-highlight: rgba(255, 255, 255, 0.06);
+
+  /* Glow shadows */
+  --shadow-glow-sm: 0 0 20px rgba(6, 182, 212, 0.15);
+  --shadow-glow: 0 0 40px rgba(6, 182, 212, 0.25), 0 0 80px rgba(6, 182, 212, 0.1);
+  --shadow-glow-lg: 0 0 60px rgba(6, 182, 212, 0.35), 0 0 120px rgba(6, 182, 212, 0.15);
+  --shadow-glow-button: 0 8px 30px rgba(6, 182, 212, 0.3);
+  --shadow-glass: 0 25px 60px rgba(2, 6, 23, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+
+  /* Slow ambient animation for background glows */
+  --animate-pulse-slow: pulse-slow 9s ease-in-out infinite;
+  --animate-pulse-slower: pulse-slower 12s ease-in-out infinite;
+
+  @keyframes pulse-slow {
+    0%,
+    100% {
+      opacity: 0.35;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.6;
+      transform: scale(1.12);
+    }
+  }
+
+  @keyframes pulse-slower {
+    0%,
+    100% {
+      opacity: 0.25;
+      transform: scale(1.05);
+    }
+    50% {
+      opacity: 0.5;
+      transform: scale(0.95);
+    }
+  }
+}

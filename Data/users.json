@@ -1,0 +1,17 @@
+[
+    {
+        "username": "admin",
+        "role": "Admin",
+        "max_prompt_length": 2000
+    },
+    {
+        "username": "employee",
+        "role": "Employee",
+        "max_prompt_length": 1000
+    },
+    {
+        "username": "intern",
+        "role": "Intern",
+        "max_prompt_length": 500
+    }
+]

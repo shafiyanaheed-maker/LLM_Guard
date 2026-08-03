@@ -1,0 +1,27 @@
+{
+    "Admin": [
+        "ignore previous instructions",
+        "developer mode",
+        "system prompt"
+    ],
+    "Employee": [
+        "ignore previous instructions",
+        "developer mode",
+        "system prompt",
+        "jailbreak",
+        "override",
+        "disable safety"
+    ],
+    "Intern": [
+        "ignore previous instructions",
+        "developer mode",
+        "system prompt",
+        "jailbreak",
+        "override",
+        "disable safety",
+        "bypass",
+        "forget your instructions",
+        "act as root",
+        "do anything now"
+    ]
+}
