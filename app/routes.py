@@ -174,6 +174,27 @@ def receive_prompt(
     # Forward Sanitized Prompt
     response = forward_prompt(sanitized_prompt)
 
+    # Handle LLM proxy failure
+    if not response.get("success", False):
+        log_request(
+            username=username,
+            role=role,
+            prompt=request.prompt,
+            status="Error",
+            prompt_injection_detected=int(is_injection),
+            detected_patterns=", ".join(detected_patterns),
+            risk_score=risk_score,
+            risk_level=risk_level
+        )
+
+        return {
+            "status": "Error",
+            "reason": response.get(
+                "error",
+                "LLM service unavailable"
+            )
+        }
+
     # Validate LLM Output
     validated_response, output_issues = validate_output(
         response["response"]
