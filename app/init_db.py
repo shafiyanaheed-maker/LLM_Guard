@@ -32,6 +32,22 @@ def initialize_database():
     )
     """)
 
+    # ML Detection columns
+    cursor.execute("PRAGMA table_info(request_logs)")
+    columns = [column[1] for column in cursor.fetchall()]
+
+    if "ml_threat_detected" not in columns:
+        cursor.execute("""
+            ALTER TABLE request_logs
+            ADD COLUMN ml_threat_detected INTEGER DEFAULT 0
+        """)
+
+    if "ml_confidence" not in columns:
+        cursor.execute("""
+            ALTER TABLE request_logs
+            ADD COLUMN ml_confidence REAL DEFAULT 0
+        """)
+
     # Blocked Logs
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS blocked_logs(
