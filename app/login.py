@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from app.auth import create_access_token
+from app.auth import create_access_token, authenticate_user
 
 router = APIRouter()
 
@@ -14,19 +14,20 @@ class LoginRequest(BaseModel):
 @router.post("/login")
 def login(user: LoginRequest):
     """
-    Simple login endpoint.
-    Replace this with SQLite verification later.
+    Authenticate user and return a JWT access token.
     """
 
-    if user.username == "admin" and user.password == "admin123":
-        token = create_access_token({"sub": user.username})
+    if not authenticate_user(user.username, user.password):
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid username or password"
+        )
 
-        return {
-            "access_token": token,
-            "token_type": "bearer"
-        }
+    token = create_access_token({
+        "sub": user.username
+    })
 
-    raise HTTPException(
-        status_code=401,
-        detail="Invalid username or password"
-    )
+    return {
+        "access_token": token,
+        "token_type": "bearer"
+    }

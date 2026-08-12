@@ -10,9 +10,10 @@ from app.risk import calculate_risk
 from app.injection_detector import detect_prompt_injection
 from app.rate_limiter import check_rate_limit
 from app.dlp import sanitize_prompt
-from app.security import verify_token
+from app.security import verify_token, require_role
 # Added import for output validation
 from app.output_validator import validate_output
+from ml.detector import detect_ml_threat
 
 router = APIRouter()
 security = HTTPBearer()
@@ -33,7 +34,16 @@ def health():
 
 
 @router.get("/logs")
-def get_logs():
+def get_logs(
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    token = credentials.credentials
+    username = verify_token(token)
+
+    require_role(
+        username,
+        ["Admin", "Analyst"]
+    )
 
     from app.database import get_connection
 
@@ -99,6 +109,11 @@ def receive_prompt(
         request.prompt
     )
 
+    # ML Threat Detection
+    ml_threat_detected, ml_confidence, ml_label = detect_ml_threat(
+        request.prompt
+    )
+
     # Risk Score (Calculated early for access by all logs)
     risk_score, risk_level = calculate_risk(
         request.prompt,
@@ -122,7 +137,9 @@ def receive_prompt(
             prompt_injection_detected=int(is_injection),
             detected_patterns=", ".join(detected_patterns),
             risk_score=risk_score,
-            risk_level=risk_level
+            risk_level=risk_level,
+            ml_threat_detected=int(ml_threat_detected),
+            ml_confidence=ml_confidence
         )
 
         return {
@@ -151,7 +168,9 @@ def receive_prompt(
             prompt_injection_detected=int(is_injection),
             detected_patterns=", ".join(detected_patterns),
             risk_score=risk_score,
-            risk_level=risk_level
+            risk_level=risk_level,
+            ml_threat_detected=int(ml_threat_detected),
+            ml_confidence=ml_confidence
         )
 
         # Updated block response to include risk metrics
@@ -161,7 +180,10 @@ def receive_prompt(
             "risk_score": risk_score,
             "risk_level": risk_level,
             "prompt_injection_detected": is_injection,
-            "detected_patterns": detected_patterns
+            "detected_patterns": detected_patterns,
+            "ml_threat_detected": ml_threat_detected,
+            "ml_confidence": ml_confidence,
+            "ml_label": ml_label
         }
 
     # -----------------------------
@@ -184,7 +206,9 @@ def receive_prompt(
             prompt_injection_detected=int(is_injection),
             detected_patterns=", ".join(detected_patterns),
             risk_score=risk_score,
-            risk_level=risk_level
+            risk_level=risk_level,
+            ml_threat_detected=int(ml_threat_detected),
+            ml_confidence=ml_confidence
         )
 
         return {
@@ -212,7 +236,9 @@ def receive_prompt(
         prompt_injection_detected=int(is_injection),
         detected_patterns=", ".join(detected_patterns),
         risk_score=risk_score,
-        risk_level=risk_level
+        risk_level=risk_level,
+        ml_threat_detected=int(ml_threat_detected),
+        ml_confidence=ml_confidence
     )
 
     return {
@@ -223,6 +249,11 @@ def receive_prompt(
         "risk_level": risk_level,
         "prompt_injection_detected": is_injection,
         "detected_patterns": detected_patterns,
+        "ml_detection": {
+            "threat_detected": ml_threat_detected,
+            "confidence": ml_confidence,
+            "label": ml_label
+        },
         "dlp_detected": detected_dlp,
         "sanitized_prompt": sanitized_prompt,
         "output_validation": {
@@ -232,8 +263,18 @@ def receive_prompt(
         "llm_response": response
     }
 
+
 @router.get("/dashboard/stats")
-def dashboard_stats():
+def dashboard_stats(
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    token = credentials.credentials
+    username = verify_token(token)
+
+    require_role(
+        username,
+        ["Admin"]
+    )
 
     from app.database import get_connection
 
@@ -279,9 +320,19 @@ def dashboard_stats():
         "attack_attempts": attack_attempts
     }
 
+
 # Added endpoint for recent dashboard activity
 @router.get("/dashboard/activity")
-def dashboard_activity():
+def dashboard_activity(
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    token = credentials.credentials
+    username = verify_token(token)
+
+    require_role(
+        username,
+        ["Admin", "Analyst"]
+    )
 
     from app.database import get_connection
 
@@ -292,8 +343,8 @@ def dashboard_activity():
         SELECT
             username,
             role,
-            status,
             prompt,
+            status,
             timestamp
         FROM request_logs
         ORDER BY id DESC
@@ -304,12 +355,13 @@ def dashboard_activity():
     conn.close()
 
     activity = []
+
     for row in rows:
         activity.append({
             "username": row[0],
             "role": row[1],
-            "status": row[2],
-            "prompt": row[3],
+            "prompt": row[2],
+            "status": row[3],
             "timestamp": row[4]
         })
 

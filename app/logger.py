@@ -9,7 +9,9 @@ def log_request(
     prompt_injection_detected=0,
     detected_patterns="",
     risk_score=0,
-    risk_level=""
+    risk_level="",
+    ml_threat_detected=0,
+    ml_confidence=0.0
 ):
     conn = get_connection()
     cursor = conn.cursor()
@@ -25,9 +27,11 @@ def log_request(
             prompt_injection_detected,
             detected_patterns,
             risk_score,
-            risk_level
+            risk_level,
+            ml_threat_detected,
+            ml_confidence
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (
             username,
@@ -37,7 +41,9 @@ def log_request(
             prompt_injection_detected,
             detected_patterns,
             risk_score,
-            risk_level
+            risk_level,
+            ml_threat_detected,
+            ml_confidence
         )
     )
 
