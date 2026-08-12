@@ -49,7 +49,6 @@ PATTERNS = {
     ],
 }
 
-
 def detect_prompt_injection(prompt: str):
     detected = []
     prompt_lower = prompt.lower()
@@ -57,7 +56,10 @@ def detect_prompt_injection(prompt: str):
     for category, rules in PATTERNS.items():
         for rule in rules:
             if re.search(rule, prompt_lower):
-                detected.append(category)
+                detected.append({
+                    "category": category,
+                    "pattern": rule
+                })
                 break
 
     return len(detected) > 0, detected
