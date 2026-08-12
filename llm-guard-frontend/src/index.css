@@ -1,6 +1,7 @@
 @import "tailwindcss";
 
-/* Light mode variant — applied when <html> has class "light" */
+/* Theme variants */
+@custom-variant dark (&:where(.dark, .dark *));
 @custom-variant light (&:where(.light, .light *));
 
 /* ============ LLM-Guard Premium Theme Tokens ============ */

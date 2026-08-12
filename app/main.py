@@ -7,8 +7,8 @@ from app.login import router as login_router
 
 app = FastAPI(
     title="LLM-Guard API",
-    description="AI Prompt Firewall",
-    version="1.0",
+    description="Secure LLM Prompt Firewall and Reverse Proxy",
+    version="1.1.0",
     debug=True
 )
 

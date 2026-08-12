@@ -1,15 +1,15 @@
 from jose import JWTError, jwt
 from fastapi import HTTPException
 
-from app.auth import SECRET_KEY, ALGORITHM
+from app.config import JWT_SECRET_KEY, JWT_ALGORITHM
 
 
 def verify_token(token: str):
     try:
         payload = jwt.decode(
             token,
-            SECRET_KEY,
-            algorithms=[ALGORITHM]
+            JWT_SECRET_KEY,
+            algorithms=[JWT_ALGORITHM]
         )
 
         username = payload.get("sub")

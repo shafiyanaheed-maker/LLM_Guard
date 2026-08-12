@@ -30,12 +30,15 @@ def forward_prompt(prompt: str):
         response = model.generate_content(prompt)
 
         return {
+            "success": True,
             "model": MODEL_NAME,
             "response": response.text
         }
 
     except Exception as e:
         return {
+            "success": False,
             "model": MODEL_NAME,
-            "response": f"Gemini API Error: {str(e)}"
+            "response": None,
+            "error": f"Gemini API Error: {str(e)}"
         }
