@@ -1,15 +1,12 @@
 from fastapi import APIRouter, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.responses import RedirectResponse
+
 from app.auth import get_user_role, get_max_prompt_length
 from app.models import PromptRequest
 from app.firewall import check_prompt, check_prompt_length
 from app.proxy import forward_prompt
-from app.logger import (
-    log_blocked_prompt,
-    log_request,
-    log_dlp_detection
-)
+from app.logger import log_blocked_prompt, log_request
 from app.risk import calculate_risk
 from app.injection_detector import detect_prompt_injection
 from app.rate_limiter import check_rate_limit
@@ -80,7 +77,9 @@ def get_logs(
             "timestamp": row[4]
         })
 
-    return {"logs": logs}
+    return {
+        "logs": logs
+    }
 
 
 @router.post("/prompt")
@@ -88,18 +87,24 @@ def receive_prompt(
     request: PromptRequest,
     credentials: HTTPAuthorizationCredentials = Depends(security)
 ):
-    # Verify JWT Token
+    # --------------------------------------------------
+    # 1. Verify JWT token
+    # --------------------------------------------------
     token = credentials.credentials
     username = verify_token(token)
 
-    # Rate Limiting
+    # --------------------------------------------------
+    # 2. Rate limiting
+    # --------------------------------------------------
     if not check_rate_limit(username):
         return {
             "status": "Blocked",
             "reason": "Rate limit exceeded. Try again later."
         }
 
-    # User Validation
+    # --------------------------------------------------
+    # 3. Validate user and role
+    # --------------------------------------------------
     role = get_user_role(username)
 
     if role is None:
@@ -108,23 +113,31 @@ def receive_prompt(
             "reason": "Invalid user"
         }
 
-    # AI Threat Detection
+    # --------------------------------------------------
+    # 4. Rule-based prompt injection detection
+    # --------------------------------------------------
     is_injection, detected_patterns = detect_prompt_injection(
         request.prompt
     )
 
-    # ML Threat Detection
+    # --------------------------------------------------
+    # 5. ML threat detection
+    # --------------------------------------------------
     ml_threat_detected, ml_confidence, ml_label = detect_ml_threat(
         request.prompt
     )
 
-    # Risk Score
+    # --------------------------------------------------
+    # 6. Risk calculation
+    # --------------------------------------------------
     risk_score, risk_level = calculate_risk(
         request.prompt,
         role
     )
 
-    # Prompt Length Check
+    # --------------------------------------------------
+    # 7. Prompt length validation
+    # --------------------------------------------------
     max_length = get_max_prompt_length(username)
 
     is_valid, message = check_prompt_length(
@@ -133,6 +146,7 @@ def receive_prompt(
     )
 
     if not is_valid:
+
         log_request(
             username=username,
             role=role,
@@ -148,10 +162,14 @@ def receive_prompt(
 
         return {
             "status": "Blocked",
-            "reason": message
+            "reason": message,
+            "risk_score": risk_score,
+            "risk_level": risk_level
         }
 
-    # Firewall Check
+    # --------------------------------------------------
+    # 8. Firewall rules
+    # --------------------------------------------------
     is_safe, message = check_prompt(
         request.prompt,
         role
@@ -189,24 +207,25 @@ def receive_prompt(
             "ml_label": ml_label
         }
 
-    # -----------------------------
-    # DLP Engine
-    # -----------------------------
-    sanitized_prompt, detected_dlp, replacements = sanitize_prompt(
-        request.prompt
-    )
-    if detected_dlp:
-     log_dlp_detection(
-        username=username,
-        role=role,
-        detected_entities=detected_dlp
+    # --------------------------------------------------
+    # 9. DLP sanitization
+    # --------------------------------------------------
+    sanitized_prompt, detected_dlp, dlp_replacements = (
+        sanitize_prompt(request.prompt)
     )
 
-    # Forward Sanitized Prompt
-    response = forward_prompt(sanitized_prompt)
+    # --------------------------------------------------
+    # 10. Forward sanitized prompt to LLM
+    # --------------------------------------------------
+    response = forward_prompt(
+        sanitized_prompt
+    )
 
-    # Handle LLM proxy failure
+    # --------------------------------------------------
+    # 11. Handle LLM failure
+    # --------------------------------------------------
     if not response.get("success", False):
+
         log_request(
             username=username,
             role=role,
@@ -228,28 +247,26 @@ def receive_prompt(
             )
         }
 
-    # -----------------------------
-    # Output Validation
-    # -----------------------------
+    # --------------------------------------------------
+    # 12. Validate LLM output
+    # --------------------------------------------------
     validated_response, output_issues = validate_output(
         response["response"]
     )
 
-    # -----------------------------
-    # DLP Restoration
-    # Restore sensitive values after
-    # LLM processing
-    # -----------------------------
-    validated_response = restore_sensitive_data(
+    # --------------------------------------------------
+    # 13. Restore original sensitive information
+    # --------------------------------------------------
+    restored_response = restore_sensitive_data(
         validated_response,
-        replacements
+        dlp_replacements
     )
 
-    # Update response with validated
-    # and restored output
-    response["response"] = validated_response
+    response["response"] = restored_response
 
-    # Log Request
+    # --------------------------------------------------
+    # 14. Log successful request
+    # --------------------------------------------------
     log_request(
         username=username,
         role=role,
@@ -263,12 +280,17 @@ def receive_prompt(
         ml_confidence=ml_confidence
     )
 
+    # --------------------------------------------------
+    # 15. Return protected response
+    # --------------------------------------------------
     return {
         "status": "Success",
         "user": username,
         "role": role,
+
         "risk_score": risk_score,
         "risk_level": risk_level,
+
         "prompt_injection_detected": is_injection,
         "detected_patterns": detected_patterns,
 
@@ -278,7 +300,13 @@ def receive_prompt(
             "label": ml_label
         },
 
-        "dlp_detected": detected_dlp,
+        "dlp": {
+            "detected": detected_dlp,
+            "sanitized": bool(dlp_replacements),
+            "restored": bool(dlp_replacements),
+            "entities": detected_dlp
+        },
+
         "sanitized_prompt": sanitized_prompt,
 
         "output_validation": {
@@ -307,31 +335,31 @@ def dashboard_stats(
     conn = get_connection()
     cursor = conn.cursor()
 
-    # Total Requests
+    # Total requests
     cursor.execute(
         "SELECT COUNT(*) FROM request_logs"
     )
     total_requests = cursor.fetchone()[0]
 
-    # Successful Requests
+    # Successful requests
     cursor.execute(
         "SELECT COUNT(*) FROM request_logs WHERE status='Success'"
     )
     success_requests = cursor.fetchone()[0]
 
-    # Blocked Requests
+    # Blocked requests
     cursor.execute(
         "SELECT COUNT(*) FROM request_logs WHERE status='Blocked'"
     )
     blocked_requests = cursor.fetchone()[0]
 
-    # Total blocked prompts
+    # Blocked prompts
     cursor.execute(
         "SELECT COUNT(*) FROM blocked_logs"
     )
     blocked_prompts = cursor.fetchone()[0]
 
-    # Attack Attempts
+    # Attack attempts
     cursor.execute("""
         SELECT COUNT(*)
         FROM request_logs
@@ -394,4 +422,6 @@ def dashboard_activity(
             "timestamp": row[4]
         })
 
-    return {"activity": activity}
+    return {
+        "activity": activity
+    }

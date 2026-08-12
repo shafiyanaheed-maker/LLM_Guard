@@ -29,3 +29,5 @@ llm_guard.db
 # OS files
 .DS_Store
 Thumbs.db
+
+logs/
