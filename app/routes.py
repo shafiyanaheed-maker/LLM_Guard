@@ -10,7 +10,7 @@ from app.risk import calculate_risk
 from app.injection_detector import detect_prompt_injection
 from app.rate_limiter import check_rate_limit
 from app.dlp import sanitize_prompt
-from app.security import verify_token
+from app.security import verify_token, require_role
 # Added import for output validation
 from app.output_validator import validate_output
 from ml.detector import detect_ml_threat
@@ -34,7 +34,16 @@ def health():
 
 
 @router.get("/logs")
-def get_logs():
+def get_logs(
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    token = credentials.credentials
+    username = verify_token(token)
+
+    require_role(
+        username,
+        ["Admin", "Analyst"]
+    )
 
     from app.database import get_connection
 
@@ -256,7 +265,16 @@ def receive_prompt(
 
 
 @router.get("/dashboard/stats")
-def dashboard_stats():
+def dashboard_stats(
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    token = credentials.credentials
+    username = verify_token(token)
+
+    require_role(
+        username,
+        ["Admin"]
+    )
 
     from app.database import get_connection
 
@@ -305,7 +323,16 @@ def dashboard_stats():
 
 # Added endpoint for recent dashboard activity
 @router.get("/dashboard/activity")
-def dashboard_activity():
+def dashboard_activity(
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    token = credentials.credentials
+    username = verify_token(token)
+
+    require_role(
+        username,
+        ["Admin", "Analyst"]
+    )
 
     from app.database import get_connection
 

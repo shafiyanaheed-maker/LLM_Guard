@@ -27,3 +27,28 @@ def verify_token(token: str):
             status_code=401,
             detail="Invalid or expired token"
         )
+
+
+def require_role(username: str, allowed_roles: list):
+    """
+    Check whether the authenticated user has permission
+    to access a resource.
+    """
+
+    from app.auth import get_user_role
+
+    role = get_user_role(username)
+
+    if role is None:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid user"
+        )
+
+    if role not in allowed_roles:
+        raise HTTPException(
+            status_code=403,
+            detail="Access denied for your role"
+        )
+
+    return role
