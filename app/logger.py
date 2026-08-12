@@ -66,3 +66,27 @@ def log_blocked_prompt(prompt, reason):
 
     conn.commit()
     conn.close()
+def log_dlp_detection(
+    username: str,
+    role: str,
+    detected_entities: list
+):
+    """
+    Log DLP detections for security monitoring.
+    """
+
+    if not detected_entities:
+        return
+
+    import json
+    from datetime import datetime
+
+    event = {
+        "event": "DLP_DETECTION",
+        "username": username,
+        "role": role,
+        "detected_entities": detected_entities,
+        "timestamp": datetime.utcnow().isoformat()
+    }
+
+    print(json.dumps(event))

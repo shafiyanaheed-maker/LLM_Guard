@@ -1,0 +1,8 @@
+{
+    "total_attacks": 0,
+    "blocked_attacks": 0,
+    "detection_rate": 0,
+    "target": 95,
+    "target_met": false,
+    "results": []
+}

@@ -1,19 +1,24 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from fastapi.responses import FileResponse, RedirectResponse
+from fastapi.responses import RedirectResponse
 from app.auth import get_user_role, get_max_prompt_length
 from app.models import PromptRequest
 from app.firewall import check_prompt, check_prompt_length
 from app.proxy import forward_prompt
-from app.logger import log_blocked_prompt, log_request
+from app.logger import (
+    log_blocked_prompt,
+    log_request,
+    log_dlp_detection
+)
 from app.risk import calculate_risk
 from app.injection_detector import detect_prompt_injection
 from app.rate_limiter import check_rate_limit
-from app.dlp import sanitize_prompt
+from app.dlp import sanitize_prompt, restore_sensitive_data
 from app.security import verify_token, require_role
-# Added import for output validation
 from app.output_validator import validate_output
+
 from ml.detector import detect_ml_threat
+
 
 router = APIRouter()
 security = HTTPBearer()
@@ -83,7 +88,6 @@ def receive_prompt(
     request: PromptRequest,
     credentials: HTTPAuthorizationCredentials = Depends(security)
 ):
-
     # Verify JWT Token
     token = credentials.credentials
     username = verify_token(token)
@@ -104,7 +108,7 @@ def receive_prompt(
             "reason": "Invalid user"
         }
 
-    # AI Threat Detection (Calculated early for access by all logs)
+    # AI Threat Detection
     is_injection, detected_patterns = detect_prompt_injection(
         request.prompt
     )
@@ -114,7 +118,7 @@ def receive_prompt(
         request.prompt
     )
 
-    # Risk Score (Calculated early for access by all logs)
+    # Risk Score
     risk_score, risk_level = calculate_risk(
         request.prompt,
         role
@@ -173,7 +177,6 @@ def receive_prompt(
             ml_confidence=ml_confidence
         )
 
-        # Updated block response to include risk metrics
         return {
             "status": "Blocked",
             "reason": message,
@@ -189,8 +192,14 @@ def receive_prompt(
     # -----------------------------
     # DLP Engine
     # -----------------------------
-    sanitized_prompt, detected_dlp = sanitize_prompt(
+    sanitized_prompt, detected_dlp, replacements = sanitize_prompt(
         request.prompt
+    )
+    if detected_dlp:
+     log_dlp_detection(
+        username=username,
+        role=role,
+        detected_entities=detected_dlp
     )
 
     # Forward Sanitized Prompt
@@ -219,12 +228,25 @@ def receive_prompt(
             )
         }
 
-    # Validate LLM Output
+    # -----------------------------
+    # Output Validation
+    # -----------------------------
     validated_response, output_issues = validate_output(
         response["response"]
     )
 
-    # Update response with validated output
+    # -----------------------------
+    # DLP Restoration
+    # Restore sensitive values after
+    # LLM processing
+    # -----------------------------
+    validated_response = restore_sensitive_data(
+        validated_response,
+        replacements
+    )
+
+    # Update response with validated
+    # and restored output
     response["response"] = validated_response
 
     # Log Request
@@ -249,17 +271,21 @@ def receive_prompt(
         "risk_level": risk_level,
         "prompt_injection_detected": is_injection,
         "detected_patterns": detected_patterns,
+
         "ml_detection": {
             "threat_detected": ml_threat_detected,
             "confidence": ml_confidence,
             "label": ml_label
         },
+
         "dlp_detected": detected_dlp,
         "sanitized_prompt": sanitized_prompt,
+
         "output_validation": {
             "issues_detected": output_issues,
             "validated": len(output_issues) == 0
         },
+
         "llm_response": response
     }
 
@@ -282,7 +308,9 @@ def dashboard_stats(
     cursor = conn.cursor()
 
     # Total Requests
-    cursor.execute("SELECT COUNT(*) FROM request_logs")
+    cursor.execute(
+        "SELECT COUNT(*) FROM request_logs"
+    )
     total_requests = cursor.fetchone()[0]
 
     # Successful Requests
@@ -297,8 +325,10 @@ def dashboard_stats(
     )
     blocked_requests = cursor.fetchone()[0]
 
-    # Total DLP Detections
-    cursor.execute("SELECT COUNT(*) FROM blocked_logs")
+    # Total blocked prompts
+    cursor.execute(
+        "SELECT COUNT(*) FROM blocked_logs"
+    )
     blocked_prompts = cursor.fetchone()[0]
 
     # Attack Attempts
@@ -321,7 +351,6 @@ def dashboard_stats(
     }
 
 
-# Added endpoint for recent dashboard activity
 @router.get("/dashboard/activity")
 def dashboard_activity(
     credentials: HTTPAuthorizationCredentials = Depends(security)
