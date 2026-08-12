@@ -221,3 +221,16 @@ def sanitize_and_unmask(
         restored_response,
         detected
     )
+
+
+def restore_sensitive_data(
+    response: str,
+    replacements: Dict[str, str]
+) -> str:
+    """
+    Restore sensitive values in an LLM response.
+    """
+    return unmask_response(
+        response,
+        replacements
+    )

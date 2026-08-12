@@ -1,7 +1,6 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from fastapi.responses import RedirectResponse
-
+from fastapi.responses import FileResponse, RedirectResponse
 from app.auth import get_user_role, get_max_prompt_length
 from app.models import PromptRequest
 from app.firewall import check_prompt, check_prompt_length
@@ -10,12 +9,12 @@ from app.logger import log_blocked_prompt, log_request
 from app.risk import calculate_risk
 from app.injection_detector import detect_prompt_injection
 from app.rate_limiter import check_rate_limit
-from app.dlp import sanitize_prompt, restore_sensitive_data
+# Changed import to support reversible mapping and restoration
+from app.dlp import sanitize_with_mapping, restore_sensitive_data
 from app.security import verify_token, require_role
+# Added import for output validation
 from app.output_validator import validate_output
-
 from ml.detector import detect_ml_threat
-
 
 router = APIRouter()
 security = HTTPBearer()
@@ -70,16 +69,14 @@ def get_logs(
 
     for row in rows:
         logs.append({
-            "username": row[0],
-            "role": row[1],
-            "prompt": row[2],
-            "status": row[3],
-            "timestamp": row[4]
+            "username": row,
+            "role": row,
+            "prompt": row,
+            "status": row,
+            "timestamp": row
         })
 
-    return {
-        "logs": logs
-    }
+    return {"logs": logs}
 
 
 @router.post("/prompt")
@@ -87,24 +84,19 @@ def receive_prompt(
     request: PromptRequest,
     credentials: HTTPAuthorizationCredentials = Depends(security)
 ):
-    # --------------------------------------------------
-    # 1. Verify JWT token
-    # --------------------------------------------------
+
+    # Verify JWT Token
     token = credentials.credentials
     username = verify_token(token)
 
-    # --------------------------------------------------
-    # 2. Rate limiting
-    # --------------------------------------------------
+    # Rate Limiting
     if not check_rate_limit(username):
         return {
             "status": "Blocked",
             "reason": "Rate limit exceeded. Try again later."
         }
 
-    # --------------------------------------------------
-    # 3. Validate user and role
-    # --------------------------------------------------
+    # User Validation
     role = get_user_role(username)
 
     if role is None:
@@ -113,31 +105,23 @@ def receive_prompt(
             "reason": "Invalid user"
         }
 
-    # --------------------------------------------------
-    # 4. Rule-based prompt injection detection
-    # --------------------------------------------------
+    # AI Threat Detection (Calculated early for access by all logs)
     is_injection, detected_patterns = detect_prompt_injection(
         request.prompt
     )
 
-    # --------------------------------------------------
-    # 5. ML threat detection
-    # --------------------------------------------------
+    # ML Threat Detection
     ml_threat_detected, ml_confidence, ml_label = detect_ml_threat(
         request.prompt
     )
 
-    # --------------------------------------------------
-    # 6. Risk calculation
-    # --------------------------------------------------
+    # Risk Score (Calculated early for access by all logs)
     risk_score, risk_level = calculate_risk(
         request.prompt,
         role
     )
 
-    # --------------------------------------------------
-    # 7. Prompt length validation
-    # --------------------------------------------------
+    # Prompt Length Check
     max_length = get_max_prompt_length(username)
 
     is_valid, message = check_prompt_length(
@@ -146,7 +130,6 @@ def receive_prompt(
     )
 
     if not is_valid:
-
         log_request(
             username=username,
             role=role,
@@ -162,14 +145,10 @@ def receive_prompt(
 
         return {
             "status": "Blocked",
-            "reason": message,
-            "risk_score": risk_score,
-            "risk_level": risk_level
+            "reason": message
         }
 
-    # --------------------------------------------------
-    # 8. Firewall rules
-    # --------------------------------------------------
+    # Firewall Check
     is_safe, message = check_prompt(
         request.prompt,
         role
@@ -195,6 +174,7 @@ def receive_prompt(
             ml_confidence=ml_confidence
         )
 
+        # Updated block response to include risk metrics
         return {
             "status": "Blocked",
             "reason": message,
@@ -207,25 +187,18 @@ def receive_prompt(
             "ml_label": ml_label
         }
 
-    # --------------------------------------------------
-    # 9. DLP sanitization
-    # --------------------------------------------------
-    sanitized_prompt, detected_dlp, dlp_replacements = (
-        sanitize_prompt(request.prompt)
+    # -----------------------------
+    # Reversible DLP Engine
+    # -----------------------------
+    sanitized_prompt, detected_dlp, dlp_replacements = sanitize_with_mapping(
+        request.prompt
     )
 
-    # --------------------------------------------------
-    # 10. Forward sanitized prompt to LLM
-    # --------------------------------------------------
-    response = forward_prompt(
-        sanitized_prompt
-    )
+    # Forward Sanitized Prompt
+    response = forward_prompt(sanitized_prompt)
 
-    # --------------------------------------------------
-    # 11. Handle LLM failure
-    # --------------------------------------------------
+    # Handle LLM proxy failure
     if not response.get("success", False):
-
         log_request(
             username=username,
             role=role,
@@ -247,26 +220,21 @@ def receive_prompt(
             )
         }
 
-    # --------------------------------------------------
-    # 12. Validate LLM output
-    # --------------------------------------------------
+    # Validate LLM Output
     validated_response, output_issues = validate_output(
         response["response"]
     )
 
-    # --------------------------------------------------
-    # 13. Restore original sensitive information
-    # --------------------------------------------------
-    restored_response = restore_sensitive_data(
+    # Re-hydrate/Restore original sensitive strings back into validation output
+    final_output = restore_sensitive_data(
         validated_response,
         dlp_replacements
     )
 
-    response["response"] = restored_response
+    # Update response with validated and restored output
+    response["response"] = final_output
 
-    # --------------------------------------------------
-    # 14. Log successful request
-    # --------------------------------------------------
+    # Log Request
     log_request(
         username=username,
         role=role,
@@ -280,40 +248,25 @@ def receive_prompt(
         ml_confidence=ml_confidence
     )
 
-    # --------------------------------------------------
-    # 15. Return protected response
-    # --------------------------------------------------
     return {
         "status": "Success",
         "user": username,
         "role": role,
-
         "risk_score": risk_score,
         "risk_level": risk_level,
-
         "prompt_injection_detected": is_injection,
         "detected_patterns": detected_patterns,
-
         "ml_detection": {
             "threat_detected": ml_threat_detected,
             "confidence": ml_confidence,
             "label": ml_label
         },
-
-        "dlp": {
-            "detected": detected_dlp,
-            "sanitized": bool(dlp_replacements),
-            "restored": bool(dlp_replacements),
-            "entities": detected_dlp
-        },
-
+        "dlp_detected": detected_dlp,
         "sanitized_prompt": sanitized_prompt,
-
         "output_validation": {
             "issues_detected": output_issues,
             "validated": len(output_issues) == 0
         },
-
         "llm_response": response
     }
 
@@ -335,37 +288,33 @@ def dashboard_stats(
     conn = get_connection()
     cursor = conn.cursor()
 
-    # Total requests
-    cursor.execute(
-        "SELECT COUNT(*) FROM request_logs"
-    )
-    total_requests = cursor.fetchone()[0]
+    # Total Requests
+    cursor.execute("SELECT COUNT(*) FROM request_logs")
+    total_requests = cursor.fetchone()
 
-    # Successful requests
+    # Successful Requests
     cursor.execute(
         "SELECT COUNT(*) FROM request_logs WHERE status='Success'"
     )
-    success_requests = cursor.fetchone()[0]
+    success_requests = cursor.fetchone()
 
-    # Blocked requests
+    # Blocked Requests
     cursor.execute(
         "SELECT COUNT(*) FROM request_logs WHERE status='Blocked'"
     )
-    blocked_requests = cursor.fetchone()[0]
+    blocked_requests = cursor.fetchone()
 
-    # Blocked prompts
-    cursor.execute(
-        "SELECT COUNT(*) FROM blocked_logs"
-    )
-    blocked_prompts = cursor.fetchone()[0]
+    # Total DLP Detections
+    cursor.execute("SELECT COUNT(*) FROM blocked_logs")
+    blocked_prompts = cursor.fetchone()
 
-    # Attack attempts
+    # Attack Attempts
     cursor.execute("""
         SELECT COUNT(*)
         FROM request_logs
         WHERE status='Blocked'
     """)
-    attack_attempts = cursor.fetchone()[0]
+    attack_attempts = cursor.fetchone()
 
     conn.close()
 
@@ -379,6 +328,7 @@ def dashboard_stats(
     }
 
 
+# Added endpoint for recent dashboard activity
 @router.get("/dashboard/activity")
 def dashboard_activity(
     credentials: HTTPAuthorizationCredentials = Depends(security)
@@ -415,13 +365,11 @@ def dashboard_activity(
 
     for row in rows:
         activity.append({
-            "username": row[0],
-            "role": row[1],
-            "prompt": row[2],
-            "status": row[3],
-            "timestamp": row[4]
+            "username": row,
+            "role": row,
+            "prompt": row,
+            "status": row,
+            "timestamp": row
         })
 
-    return {
-        "activity": activity
-    }
+    return {"activity": activity}
