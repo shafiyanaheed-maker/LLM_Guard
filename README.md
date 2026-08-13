@@ -88,3 +88,24 @@ Under Development
 - Additional security rules for prompt analysis
 - Improved testing coverage
 - Better monitoring and reporting features
+
+## Latest Findings (Run: 20260812_205027)
+
+Overall detection rate: **84.4%** (27/32 attacks blocked).
+
+| Category | Detection Rate |
+|---|---|
+| dan_attack | 100% |
+| data_exfiltration | 100% |
+| jailbreak | **16.7%** ⚠️ |
+| prompt_injection | 100% |
+| role_manipulation | 100% |
+| system_prompt_extraction | 100% |
+
+**Key finding:** The `jailbreak` category is the weakest area — 5 of 6 attacks
+bypassed the guard using techniques like hypothetical framing, authority
+override, and translation bypass. See `report/vulnerability_findings_20260812_205027.md`
+for the full breakdown and suggested owner files.
+
+Dataset has since been expanded with 4 additional jailbreak variants
+(JB-007 to JB-010) to test whether fixes hold up against similar patterns.
