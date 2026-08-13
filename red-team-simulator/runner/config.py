@@ -1,24 +1,35 @@
 """
-Configuration for the Red-Team Simulator.
+Configuration for the Red-Team Simulator — now wired to the REAL LLM_Guard API.
 
-Edit these values to match how your teammates' guard system actually works.
-Talk to whoever owns proxy.py / routes.py / main.py to confirm:
-  1. What endpoint receives a raw prompt (TARGET_URL)
-  2. What JSON key the prompt goes in (PROMPT_FIELD)
-  3. How you know a prompt was BLOCKED vs ALLOWED (see attack_runner.py -> is_blocked())
+Confirmed from teammate + Swagger UI (/docs):
+  - Login:  POST http://127.0.0.1:8000/login   body: {"username": "admin", "password": "admin123"}
+            response: {"access_token": "...", "token_type": "bearer"}
+  - Prompt: POST http://127.0.0.1:8000/prompt   body: {"username": "guest", "prompt": "..."}
+            auth:   Authorization: Bearer <access_token>
+
+If your teammate changes any of this later, this is the only file you should
+need to touch (plus is_blocked() in attack_runner.py if the block signal changes).
 """
 
 import os
 
-# The endpoint your guard system exposes to test prompts against.
-# Example if it's a local FastAPI/Flask server: "http://127.0.0.1:8000/chat"
-TARGET_URL = os.environ.get("RTS_TARGET_URL", "http://127.0.0.1:8000/api/chat")
+# --- Base server ---
+BASE_URL = os.environ.get("RTS_BASE_URL", "http://127.0.0.1:8000")
 
-# Some setups protect this endpoint with an API key (see api_key.py in your repo).
-API_KEY = os.environ.get("RTS_API_KEY", "")
+# --- Login (to obtain a bearer token) ---
+LOGIN_URL = f"{BASE_URL}/login"
+LOGIN_USERNAME = os.environ.get("RTS_LOGIN_USERNAME", "admin")
+LOGIN_PASSWORD = os.environ.get("RTS_LOGIN_PASSWORD", "admin123")
 
-# JSON field name the target API expects the prompt in.
-PROMPT_FIELD = "message"
+# --- Prompt (the actual attack target) ---
+TARGET_URL = f"{BASE_URL}/prompt"
+
+# The "username" field sent along with every attack prompt.
+# (Separate from the login username — this is whoever is "asking" the prompt.)
+PROMPT_USERNAME = os.environ.get("RTS_PROMPT_USERNAME", "guest")
+
+# JSON field name the target API expects the prompt text in.
+PROMPT_FIELD = "prompt"
 
 # Request timeout in seconds.
 TIMEOUT = 15
