@@ -1,0 +1,152 @@
+{
+  "run_timestamp": "20260815_091501",
+  "tests": [
+    {
+      "test": "Missing 'prompt' field",
+      "status_code": 422,
+      "possible_info_leak": false,
+      "response_preview": {
+        "detail": [
+          {
+            "type": "missing",
+            "loc": [
+              "body",
+              "prompt"
+            ],
+            "msg": "Field required",
+            "input": {
+              "username": "guest"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "test": "Wrong type: prompt as integer",
+      "status_code": 422,
+      "possible_info_leak": false,
+      "response_preview": {
+        "detail": [
+          {
+            "type": "string_type",
+            "loc": [
+              "body",
+              "prompt"
+            ],
+            "msg": "Input should be a valid string",
+            "input": 12345
+          }
+        ]
+      }
+    },
+    {
+      "test": "Wrong type: prompt as array",
+      "status_code": 422,
+      "possible_info_leak": false,
+      "response_preview": {
+        "detail": [
+          {
+            "type": "string_type",
+            "loc": [
+              "body",
+              "prompt"
+            ],
+            "msg": "Input should be a valid string",
+            "input": [
+              "a",
+              "b"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "test": "Missing 'username' field",
+      "status_code": 422,
+      "possible_info_leak": false,
+      "response_preview": {
+        "detail": [
+          {
+            "type": "missing",
+            "loc": [
+              "body",
+              "username"
+            ],
+            "msg": "Field required",
+            "input": {
+              "prompt": "hello"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "test": "Malformed JSON body",
+      "status_code": 422,
+      "possible_info_leak": false,
+      "response_preview": {
+        "detail": [
+          {
+            "type": "model_attributes_type",
+            "loc": [
+              "body"
+            ],
+            "msg": "Input should be a valid dictionary or object to extract fields from",
+            "input": "{not valid json!!"
+          }
+        ]
+      }
+    },
+    {
+      "test": "Very large prompt (~50k chars)",
+      "status_code": 200,
+      "possible_info_leak": false,
+      "response_preview": {
+        "status": "Blocked",
+        "reason": "Prompt exceeds your limit (5000 characters)"
+      }
+    },
+    {
+      "test": "Unexpected extra fields (role escalation attempt)",
+      "status_code": 200,
+      "possible_info_leak": false,
+      "response_preview": {
+        "status": "Success",
+        "user": "admin",
+        "role": "Admin",
+        "risk_score": 0,
+        "risk_level": "Low",
+        "prompt_injection_detected": false,
+        "detected_patterns": [],
+        "dlp_detected": [],
+        "sanitized_prompt": "hello",
+        "output_validation": {
+          "issues_detected": [],
+          "validated": true
+        },
+        "llm_response": {
+          "model": "gemini-flash-latest",
+          "response": "Hello! How can I help you today?"
+        }
+      }
+    },
+    {
+      "test": "Null prompt value",
+      "status_code": 422,
+      "possible_info_leak": false,
+      "response_preview": {
+        "detail": [
+          {
+            "type": "string_type",
+            "loc": [
+              "body",
+              "prompt"
+            ],
+            "msg": "Input should be a valid string",
+            "input": null
+          }
+        ]
+      }
+    }
+  ]
+}
