@@ -1,0 +1,93 @@
+{
+  "run_timestamp": "20260815_091232",
+  "tests": [
+    {
+      "test": "No Authorization header",
+      "status_code": 401,
+      "response": {
+        "detail": "Not authenticated"
+      }
+    },
+    {
+      "test": "Empty Bearer token",
+      "status_code": 401,
+      "response": {
+        "detail": "Not authenticated"
+      }
+    },
+    {
+      "test": "Garbage random token",
+      "status_code": 401,
+      "response": {
+        "detail": "Invalid or expired token"
+      }
+    },
+    {
+      "test": "Malformed JWT structure",
+      "status_code": 401,
+      "response": {
+        "detail": "Invalid or expired token"
+      }
+    },
+    {
+      "test": "Wrong auth scheme (Basic instead of Bearer)",
+      "status_code": 401,
+      "response": {
+        "detail": "Not authenticated"
+      }
+    },
+    {
+      "test": "Valid token with tampered signature",
+      "status_code": 401,
+      "response": {
+        "detail": "Invalid or expired token"
+      }
+    },
+    {
+      "test": "Lowercase 'bearer' scheme",
+      "status_code": 200,
+      "response": {
+        "status": "Success",
+        "user": "admin",
+        "role": "Admin",
+        "risk_score": 0,
+        "risk_level": "Low",
+        "prompt_injection_detected": false,
+        "detected_patterns": [],
+        "dlp_detected": [],
+        "sanitized_prompt": "hello",
+        "output_validation": {
+          "issues_detected": [],
+          "validated": true
+        },
+        "llm_response": {
+          "model": "gemini-flash-latest",
+          "response": "Hello! How can I help you today?"
+        }
+      }
+    },
+    {
+      "test": "BASELINE: valid token (should succeed)",
+      "status_code": 200,
+      "response": {
+        "status": "Success",
+        "user": "admin",
+        "role": "Admin",
+        "risk_score": 0,
+        "risk_level": "Low",
+        "prompt_injection_detected": false,
+        "detected_patterns": [],
+        "dlp_detected": [],
+        "sanitized_prompt": "hello",
+        "output_validation": {
+          "issues_detected": [],
+          "validated": true
+        },
+        "llm_response": {
+          "model": "gemini-flash-latest",
+          "response": "Hello! How can I help you today?"
+        }
+      }
+    }
+  ]
+}
