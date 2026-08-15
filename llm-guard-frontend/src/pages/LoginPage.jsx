@@ -1,42 +1,169 @@
 import LoginCard from "../components/LoginCard";
+import ThemeToggle from "../components/ThemeToggle";
 
-function LoginPage() {
+export default function LoginPage() {
   return (
-    <div className="relative min-h-screen overflow-hidden bg-slate-950 light:bg-slate-50 flex items-center justify-center px-6">
+    <div
+      className="
+        relative
+        min-h-screen
+        overflow-hidden
+        bg-slate-50
+        dark:bg-slate-950
+      "
+    >
+      {/* =====================================================
+          THEME TOGGLE
+          ===================================================== */}
 
-      {/* Base gradient */}
-      <div className="absolute inset-0 bg-gradient-to-br from-slate-950 via-[#0a1128] to-slate-900 light:from-slate-50 light:via-slate-100 light:to-white" />
+      <ThemeToggle />
 
-      {/* Aurora glow — top left */}
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_15%_10%,rgba(6,182,212,0.22),transparent_45%),radial-gradient(circle_at_85%_90%,rgba(14,165,233,0.18),transparent_45%),radial-gradient(circle_at_50%_50%,rgba(6,182,212,0.06),transparent_60%)] light:bg-[radial-gradient(circle_at_15%_10%,rgba(6,182,212,0.16),transparent_45%),radial-gradient(circle_at_85%_90%,rgba(14,165,233,0.12),transparent_45%)]" />
+      {/* =====================================================
+          MAIN BACKGROUND
+          ===================================================== */}
 
-      {/* Soft ambient blobs */}
-      <div className="absolute -top-32 -left-32 h-80 w-80 rounded-full bg-cyan-500/15 blur-[100px] animate-pulse-slow light:bg-cyan-400/20" />
-      <div className="absolute -bottom-40 -right-32 h-96 w-96 rounded-full bg-sky-500/10 blur-[120px] animate-pulse-slower light:bg-sky-400/15" />
-      <div className="absolute top-1/2 left-1/4 h-64 w-64 rounded-full bg-teal-400/5 blur-[100px] light:bg-teal-300/10" />
-
-      {/* Cyber Grid */}
       <div
-        className="absolute inset-0 opacity-[0.07] light:opacity-[0.04]"
+        className="
+          absolute
+          inset-0
+          bg-gradient-to-br
+          from-slate-50
+          via-cyan-50
+          to-white
+          dark:from-slate-950
+          dark:via-[#071425]
+          dark:to-slate-900
+        "
+      />
+
+      {/* =====================================================
+          CYAN GLOW
+          ===================================================== */}
+
+      <div
+        className="
+          pointer-events-none
+          absolute
+          -left-40
+          -top-40
+          h-[500px]
+          w-[500px]
+          rounded-full
+          bg-cyan-400/20
+          blur-[130px]
+          dark:bg-cyan-500/10
+        "
+      />
+
+      {/* =====================================================
+          SKY GLOW
+          ===================================================== */}
+
+      <div
+        className="
+          pointer-events-none
+          absolute
+          -bottom-40
+          -right-40
+          h-[500px]
+          w-[500px]
+          rounded-full
+          bg-sky-400/20
+          blur-[140px]
+          dark:bg-sky-500/10
+        "
+      />
+
+      {/* =====================================================
+          CENTER GLOW
+          ===================================================== */}
+
+      <div
+        className="
+          pointer-events-none
+          absolute
+          left-1/2
+          top-1/2
+          h-[350px]
+          w-[350px]
+          -translate-x-1/2
+          -translate-y-1/2
+          rounded-full
+          bg-cyan-300/10
+          blur-[120px]
+          dark:bg-cyan-500/5
+        "
+      />
+
+      {/* =====================================================
+          GRID
+          ===================================================== */}
+
+      <div
+        className="
+          pointer-events-none
+          absolute
+          inset-0
+          opacity-[0.04]
+          dark:opacity-[0.05]
+        "
         style={{
           backgroundImage: `
-            linear-gradient(rgba(255,255,255,0.08) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(255,255,255,0.08) 1px, transparent 1px)
+            linear-gradient(
+              rgba(15, 23, 42, 0.5) 1px,
+              transparent 1px
+            ),
+            linear-gradient(
+              90deg,
+              rgba(15, 23, 42, 0.5) 1px,
+              transparent 1px
+            )
           `,
           backgroundSize: "40px 40px",
         }}
       />
 
-      {/* Vignette to focus the card */}
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_45%,rgba(2,6,23,0.65)_100%)] light:bg-[radial-gradient(ellipse_at_center,transparent_50%,rgba(226,232,240,0.6)_100%)]" />
+      {/* =====================================================
+          CONTENT
+          ===================================================== */}
 
-      {/* Login Card */}
-      <div className="relative z-10 w-full flex justify-center">
-        <LoginCard />
+      <main
+        className="
+          relative
+          z-10
+          flex
+          min-h-screen
+          items-center
+          justify-center
+          px-4
+          py-10
+          sm:px-6
+        "
+      >
+        <div className="w-full max-w-md">
+          <LoginCard />
+        </div>
+      </main>
+
+      {/* =====================================================
+          FOOTER
+          ===================================================== */}
+
+      <div
+        className="
+          absolute
+          bottom-4
+          left-0
+          right-0
+          z-10
+          text-center
+          text-xs
+          text-slate-400
+          dark:text-slate-600
+        "
+      >
+        LLM-Guard © 2026 • AI Security Platform
       </div>
-
     </div>
   );
 }
-
-export default LoginPage;
