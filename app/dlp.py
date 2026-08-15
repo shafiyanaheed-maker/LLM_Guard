@@ -1,62 +1,236 @@
 import re
+from typing import Dict, Tuple, List
 
 
-def sanitize_prompt(prompt: str):
+# Patterns used to detect sensitive information.
+PATTERNS = [
+    (
+        "Email",
+        r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}",
+        "[EMAIL]"
+    ),
+    (
+        "Phone Number",
+        r"\b\d{10}\b",
+        "[PHONE]"
+    ),
+    (
+        "Credit Card",
+        r"\b(?:\d{4}[- ]?){3}\d{4}\b|\b\d{13,16}\b",
+        "[CREDIT_CARD]"
+    ),
+    (
+        "OpenAI API Key",
+        r"\bsk-[A-Za-z0-9]{10,}\b",
+        "[OPENAI_API_KEY]"
+    ),
+    (
+        "IPv4 Address",
+        r"\b(?:\d{1,3}\.){3}\d{1,3}\b",
+        "[IP_ADDRESS]"
+    ),
+    (
+        "Aadhaar Number",
+        r"\b\d{4}\s?\d{4}\s?\d{4}\b",
+        "[AADHAAR]"
+    ),
+    (
+        "PAN Card",
+        r"\b[A-Z]{5}[0-9]{4}[A-Z]\b",
+        "[PAN]"
+    ),
+    (
+        "Passport Number",
+        r"\b[A-PR-WYa-pr-wy][1-9]\d\s?\d{4}[1-9]\b",
+        "[PASSPORT]"
+    ),
+    (
+        "AWS Access Key",
+        r"\bAKIA[0-9A-Z]{16}\b",
+        "[AWS_ACCESS_KEY]"
+    ),
+    (
+        "GitHub Token",
+        r"\bghp_[A-Za-z0-9]{36}\b",
+        "[GITHUB_TOKEN]"
+    ),
+    (
+        "Google API Key",
+        r"\bAIza[0-9A-Za-z\-_]{35}\b",
+        "[GOOGLE_API_KEY]"
+    ),
+    (
+        "JWT Token",
+        r"\beyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\b",
+        "[JWT_TOKEN]"
+    ),
+]
+
+
+def sanitize_prompt(
+    prompt: str
+) -> Tuple[str, List[str]]:
+    """
+    Backwards-compatible DLP function.
+
+    Detects and replaces sensitive information.
+
+    Returns:
+        sanitized_prompt
+        detected entity names
+    """
+
+    sanitized_prompt = prompt
     detected = []
 
-    patterns = [
-        ("Email",
-         r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}",
-         "[EMAIL]"),
-
-        ("Phone Number",
-         r"\b\d{10}\b",
-         "[PHONE]"),
-
-        ("Credit Card",
-         r"\b(?:\d{4}[- ]?){3}\d{4}\b|\b\d{13,16}\b",
-         "[CREDIT_CARD]"),
-
-        ("OpenAI API Key",
-         r"sk-[A-Za-z0-9]{10,}",
-         "[OPENAI_API_KEY]"),
-
-        ("IPv4 Address",
-         r"\b(?:\d{1,3}\.){3}\d{1,3}\b",
-         "[IP_ADDRESS]"),
-
-        ("Aadhaar Number",
-         r"\b\d{4}\s?\d{4}\s?\d{4}\b",
-         "[AADHAAR]"),
-
-        ("PAN Card",
-         r"\b[A-Z]{5}[0-9]{4}[A-Z]\b",
-         "[PAN]"),
-
-        ("Passport Number",
-         r"\b[A-PR-WYa-pr-wy][1-9]\d\s?\d{4}[1-9]\b",
-         "[PASSPORT]"),
-
-        ("AWS Access Key",
-         r"\bAKIA[0-9A-Z]{16}\b",
-         "[AWS_ACCESS_KEY]"),
-
-        ("GitHub Token",
-         r"\bghp_[A-Za-z0-9]{36}\b",
-         "[GITHUB_TOKEN]"),
-
-        ("Google API Key",
-         r"\bAIza[0-9A-Za-z\-_]{35}\b",
-         "[GOOGLE_API_KEY]"),
-
-        ("JWT Token",
-         r"eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+",
-         "[JWT_TOKEN]")
-    ]
-
-    for name, pattern, replacement in patterns:
-        if re.search(pattern, prompt):
+    for name, pattern, replacement in PATTERNS:
+        if re.search(pattern, sanitized_prompt):
             detected.append(name)
-            prompt = re.sub(pattern, replacement, prompt)
 
-    return prompt, detected
+            sanitized_prompt = re.sub(
+                pattern,
+                replacement,
+                sanitized_prompt
+            )
+
+    return sanitized_prompt, detected
+
+
+def sanitize_with_mapping(
+    prompt: str
+) -> Tuple[str, List[str], Dict[str, str]]:
+    """
+    Sanitize sensitive information while creating a reversible
+    mapping between placeholders and the original values.
+
+    Example:
+
+        Input:
+            "Email me at user@example.com"
+
+        Sanitized:
+            "Email me at [EMAIL_1]"
+
+        Mapping:
+            {
+                "[EMAIL_1]": "user@example.com"
+            }
+    """
+
+    sanitized_prompt = prompt
+    detected = []
+    replacements: Dict[str, str] = {}
+
+    counters: Dict[str, int] = {}
+
+    for name, pattern, _ in PATTERNS:
+
+        matches = list(
+            re.finditer(
+                pattern,
+                sanitized_prompt
+            )
+        )
+
+        if not matches:
+            continue
+
+        if name not in detected:
+            detected.append(name)
+
+        for match in reversed(matches):
+
+            original_value = match.group(0)
+
+            counters[name] = counters.get(name, 0) + 1
+
+            base_placeholder = PATTERNS[
+                [item[0] for item in PATTERNS].index(name)
+            ][2]
+
+            placeholder = (
+                base_placeholder[:-1]
+                + f"_{counters[name]}]"
+            )
+
+            replacements[placeholder] = original_value
+
+            start = match.start()
+            end = match.end()
+
+            sanitized_prompt = (
+                sanitized_prompt[:start]
+                + placeholder
+                + sanitized_prompt[end:]
+            )
+
+    return sanitized_prompt, detected, replacements
+
+
+def unmask_response(
+    response: str,
+    replacements: Dict[str, str]
+) -> str:
+    """
+    Restore sensitive values in an LLM response.
+
+    Only placeholders generated by sanitize_with_mapping()
+    are restored.
+    """
+
+    restored_response = response
+
+    for placeholder, original_value in replacements.items():
+        restored_response = restored_response.replace(
+            placeholder,
+            original_value
+        )
+
+    return restored_response
+
+
+def sanitize_and_unmask(
+    prompt: str,
+    llm_response: str
+) -> Tuple[str, str, List[str]]:
+    """
+    Complete reversible DLP pipeline.
+
+    1. Detect sensitive data.
+    2. Replace it with placeholders.
+    3. Send sanitized prompt to the LLM.
+    4. Restore original values in the response.
+
+    Returns:
+        sanitized_prompt
+        restored_response
+        detected_entities
+    """
+
+    sanitized_prompt, detected, replacements = (
+        sanitize_with_mapping(prompt)
+    )
+
+    restored_response = unmask_response(
+        llm_response,
+        replacements
+    )
+
+    return (
+        sanitized_prompt,
+        restored_response,
+        detected
+    )
+
+
+def restore_sensitive_data(
+    response: str,
+    replacements: Dict[str, str]
+) -> str:
+    """
+    Restore sensitive values in an LLM response.
+    """
+    return unmask_response(
+        response,
+        replacements
+    )

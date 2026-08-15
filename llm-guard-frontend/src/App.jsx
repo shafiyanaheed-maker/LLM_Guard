@@ -2,8 +2,10 @@ import { Routes, Route } from "react-router-dom";
 import LandingPage from "./pages/LandingPage";
 import LoginPage from "./pages/LoginPage";
 import Dashboard from "./pages/Dashboard";
+import PromptFirewall from "./pages/PromptFirewall";
 import Logs from "./pages/Logs";
 import Analytics from "./pages/Analytics";
+import Settings from "./pages/Settings";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 function App() {
@@ -23,6 +25,15 @@ function App() {
       />
 
       <Route
+        path="/prompt-firewall"
+        element={
+          <ProtectedRoute>
+            <PromptFirewall />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
         path="/logs"
         element={
           <ProtectedRoute>
@@ -36,6 +47,15 @@ function App() {
         element={
           <ProtectedRoute>
             <Analytics />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/settings"
+        element={
+          <ProtectedRoute>
+            <Settings />
           </ProtectedRoute>
         }
       />

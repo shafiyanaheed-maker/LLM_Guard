@@ -127,23 +127,11 @@ function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
 
-  /* =====================================================
-     ONLY TWO MODES:
-     LIGHT
-     DARK
-  ===================================================== */
-
   const [isLight, setIsLight] = useState(() => {
     return localStorage.getItem("theme") === "light";
   });
 
   const navigate = useNavigate();
-
-  const hasToken = !!localStorage.getItem("token");
-
-  /* =====================================================
-     APPLY THEME
-  ===================================================== */
 
   useEffect(() => {
     const root = document.documentElement;
@@ -158,10 +146,6 @@ function Navbar() {
       localStorage.setItem("theme", "dark");
     }
   }, [isLight]);
-
-  /* =====================================================
-     SCROLL DETECTION
-  ===================================================== */
 
   useEffect(() => {
     const onScroll = () => {
@@ -183,24 +167,22 @@ function Navbar() {
     setIsLight((current) => !current);
   };
 
-  const primaryPath = hasToken ? "/dashboard" : "/login";
-
   const links = [
     {
       label: "Features",
-      href: "#features",
+      path: "/features",
     },
     {
       label: "How It Works",
-      href: "#how-it-works",
+      path: "/how-it-works",
     },
     {
       label: "Why LLM Guard",
-      href: "#why",
+      path: "/why",
     },
     {
       label: "Preview",
-      href: "#preview",
+      path: "/preview",
     },
   ];
 
@@ -217,11 +199,12 @@ function Navbar() {
     >
       <nav className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
 
-        {/* =================================================
-            BRAND
-        ================================================= */}
+        {/* BRAND */}
 
-        <a href="#top" className="flex items-center gap-2.5">
+        <button
+          onClick={() => navigate("/")}
+          className="flex items-center gap-2.5 text-left"
+        >
           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-cyan-400/10 border border-cyan-400/30">
             <Shield className="text-cyan-400" size={20} />
           </div>
@@ -235,27 +218,23 @@ function Navbar() {
               AI Prompt Firewall
             </span>
           </div>
-        </a>
+        </button>
 
-        {/* =================================================
-            DESKTOP LINKS
-        ================================================= */}
+        {/* DESKTOP LINKS */}
 
         <div className="hidden md:flex items-center gap-8">
           {links.map((link) => (
-            <a
-              key={link.href}
-              href={link.href}
+            <button
+              key={link.path}
+              onClick={() => navigate(link.path)}
               className={navLinkCls}
             >
               {link.label}
-            </a>
+            </button>
           ))}
         </div>
 
-        {/* =================================================
-            DESKTOP ACTIONS
-        ================================================= */}
+        {/* DESKTOP ACTIONS */}
 
         <div className="hidden md:flex items-center gap-3">
 
@@ -274,30 +253,18 @@ function Navbar() {
             )}
           </button>
 
-          {/* LOGIN */}
+          {/* GET STARTED */}
 
           <button
             onClick={() => navigate("/login")}
-            className="rounded-xl px-4 py-2 text-sm font-medium text-slate-300 light:text-slate-600 border border-white/10 light:border-slate-200 bg-white/[0.03] light:bg-white transition-all duration-200 hover:bg-white/[0.06] light:hover:bg-slate-50 hover:text-white light:hover:text-slate-900"
-          >
-            {hasToken ? "Account" : "Login"}
-          </button>
-
-          {/* PRIMARY ACTION */}
-
-          <button
-            onClick={() => navigate(primaryPath)}
             className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-500 to-sky-600 px-4 py-2 text-sm font-semibold text-white transition-all duration-200 hover:brightness-110 hover:shadow-[0_4px_20px_rgba(6,182,212,0.25)]"
           >
-            {hasToken ? "Open Dashboard" : "Get Started"}
-
+            Get Started
             <ArrowRight size={16} />
           </button>
         </div>
 
-        {/* =================================================
-            MOBILE
-        ================================================= */}
+        {/* MOBILE */}
 
         <div className="md:hidden flex items-center gap-2">
 
@@ -332,46 +299,35 @@ function Navbar() {
         </div>
       </nav>
 
-      {/* =================================================
-          MOBILE MENU
-      ================================================= */}
+      {/* MOBILE MENU */}
 
       {open && (
         <div className="md:hidden border-t border-white/5 light:border-slate-200 bg-slate-950/95 light:bg-white/95 backdrop-blur-md px-4 py-4 space-y-1">
 
           {links.map((link) => (
-            <a
-              key={link.href}
-              href={link.href}
-              onClick={() => setOpen(false)}
-              className="block rounded-lg px-3 py-2.5 text-sm font-medium text-slate-300 light:text-slate-600 transition-colors duration-200 hover:bg-white/[0.05] light:hover:bg-slate-100 hover:text-white light:hover:text-slate-900"
+            <button
+              key={link.path}
+              onClick={() => {
+                setOpen(false);
+                navigate(link.path);
+              }}
+              className="block w-full text-left rounded-lg px-3 py-2.5 text-sm font-medium text-slate-300 light:text-slate-600 transition-colors duration-200 hover:bg-white/[0.05] light:hover:bg-slate-100 hover:text-white light:hover:text-slate-900"
             >
               {link.label}
-            </a>
+            </button>
           ))}
 
-          <div className="pt-2 flex gap-3">
+          <div className="pt-2">
 
             <button
               onClick={() => {
                 setOpen(false);
                 navigate("/login");
               }}
-              className="flex-1 rounded-xl px-4 py-2.5 text-sm font-medium text-slate-300 light:text-slate-600 border border-white/10 light:border-slate-200 bg-white/[0.03] light:bg-white transition-all duration-200 hover:bg-white/[0.06] light:hover:bg-slate-50 hover:text-white light:hover:text-slate-900"
+              className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-500 to-sky-600 px-4 py-2.5 text-sm font-semibold text-white transition-all duration-200 hover:brightness-110"
             >
-              {hasToken ? "Account" : "Login"}
-            </button>
-
-            <button
-              onClick={() => {
-                setOpen(false);
-                navigate(primaryPath);
-              }}
-              className="flex-1 rounded-xl bg-gradient-to-r from-cyan-500 to-sky-600 px-4 py-2.5 text-sm font-semibold text-white transition-all duration-200 hover:brightness-110"
-            >
-              {hasToken
-                ? "Open Dashboard"
-                : "Get Started"}
+              Get Started
+              <ArrowRight size={16} />
             </button>
 
           </div>
@@ -565,8 +521,6 @@ function AnalysisDemo() {
 function Hero() {
   const navigate = useNavigate();
 
-  const hasToken = !!localStorage.getItem("token");
-
   return (
     <section
       id="top"
@@ -640,29 +594,11 @@ function Hero() {
             <div className="mt-8 flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3.5">
 
               <button
-                onClick={() =>
-                  navigate(
-                    hasToken
-                      ? "/dashboard"
-                      : "/login"
-                  )
-                }
+                onClick={() => navigate("/login")}
                 className="inline-flex w-full sm:w-auto items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-500 to-sky-600 px-7 py-3 text-sm font-semibold text-white transition-all duration-200 hover:brightness-110 hover:shadow-[0_4px_20px_rgba(6,182,212,0.25)] active:scale-[0.98]"
               >
-
-                {hasToken
-                  ? "Open Dashboard"
-                  : "Get Started"}
-
+                Get Started
                 <ArrowRight size={18} />
-
-              </button>
-
-              <button
-                onClick={() => navigate("/login")}
-                className="inline-flex w-full sm:w-auto items-center justify-center gap-2 rounded-xl border border-white/10 light:border-slate-200 bg-white/[0.03] light:bg-white/70 px-7 py-3 text-sm font-medium text-slate-300 light:text-slate-600 transition-all duration-200 hover:bg-white/[0.06] light:hover:bg-slate-50 hover:text-white light:hover:text-slate-900"
-              >
-                Login
               </button>
 
             </div>
@@ -728,10 +664,6 @@ const FEATURES = [
   },
 ];
 
-/* =========================================================
-   FEATURES COMPONENT
-========================================================= */
-
 function Features() {
   return (
     <section
@@ -754,7 +686,6 @@ function Features() {
           {FEATURES.map((feature) => {
 
             const accent = ACCENTS[feature.accent];
-
             const Icon = feature.icon;
 
             return (
@@ -849,7 +780,6 @@ function HowItWorks() {
           {STEPS.map((step, index) => {
 
             const accent = ACCENTS[step.accent];
-
             const Icon = step.icon;
 
             return (
@@ -958,7 +888,6 @@ function WhyLLMGuard() {
           {WHY.map((item) => {
 
             const accent = ACCENTS[item.accent];
-
             const Icon = item.icon;
 
             return (
@@ -1004,8 +933,6 @@ function WhyLLMGuard() {
 
 function DashboardPreview() {
   const navigate = useNavigate();
-
-  const hasToken = !!localStorage.getItem("token");
 
   const miniStats = [
     {
@@ -1290,22 +1217,11 @@ function DashboardPreview() {
           <div className="mt-10 text-center">
 
             <button
-              onClick={() =>
-                navigate(
-                  hasToken
-                    ? "/dashboard"
-                    : "/login"
-                )
-              }
+              onClick={() => navigate("/login")}
               className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-500 to-sky-600 px-7 py-3 text-sm font-semibold text-white transition-all duration-200 hover:brightness-110 hover:shadow-[0_4px_20px_rgba(6,182,212,0.25)] active:scale-[0.98]"
             >
-
-              {hasToken
-                ? "Open Dashboard"
-                : "Login to see it live"}
-
+              Get Started
               <ArrowRight size={18} />
-
             </button>
 
           </div>
@@ -1321,8 +1237,6 @@ function DashboardPreview() {
 
 function FinalCTA() {
   const navigate = useNavigate();
-
-  const hasToken = !!localStorage.getItem("token");
 
   return (
     <section className="relative py-20 sm:py-28">
@@ -1360,22 +1274,11 @@ function FinalCTA() {
             <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3.5">
 
               <button
-                onClick={() =>
-                  navigate(
-                    hasToken
-                      ? "/dashboard"
-                      : "/login"
-                  )
-                }
+                onClick={() => navigate("/login")}
                 className="inline-flex w-full sm:w-auto items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-500 to-sky-600 px-8 py-3 text-sm font-semibold text-white transition-all duration-200 hover:brightness-110 hover:shadow-[0_4px_20px_rgba(6,182,212,0.25)] active:scale-[0.98]"
               >
-
-                {hasToken
-                  ? "Open Dashboard"
-                  : "Get Started"}
-
+                Get Started
                 <ArrowRight size={18} />
-
               </button>
 
             </div>
@@ -1392,6 +1295,8 @@ function FinalCTA() {
 ========================================================= */
 
 function Footer() {
+  const navigate = useNavigate();
+
   return (
     <footer className="border-t border-white/5 light:border-slate-200 py-12">
 
@@ -1401,7 +1306,10 @@ function Footer() {
 
           {/* BRAND */}
 
-          <div className="flex items-center gap-2.5">
+          <button
+            onClick={() => navigate("/")}
+            className="flex items-center gap-2.5 text-left"
+          >
 
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-cyan-400/10 border border-cyan-400/30">
 
@@ -1423,39 +1331,39 @@ function Footer() {
               </span>
 
             </div>
-          </div>
+          </button>
 
           {/* LINKS */}
 
           <div className="flex flex-wrap items-center justify-center gap-6">
 
-            <a
-              href="#features"
+            <button
+              onClick={() => navigate("/features")}
               className="text-sm text-slate-400 light:text-slate-500 hover:text-white light:hover:text-slate-900 transition-colors duration-200"
             >
               Features
-            </a>
+            </button>
 
-            <a
-              href="#how-it-works"
+            <button
+              onClick={() => navigate("/how-it-works")}
               className="text-sm text-slate-400 light:text-slate-500 hover:text-white light:hover:text-slate-900 transition-colors duration-200"
             >
               How It Works
-            </a>
+            </button>
 
-            <a
-              href="#why"
+            <button
+              onClick={() => navigate("/why")}
               className="text-sm text-slate-400 light:text-slate-500 hover:text-white light:hover:text-slate-900 transition-colors duration-200"
             >
               Why LLM Guard
-            </a>
+            </button>
 
-            <a
-              href="#preview"
+            <button
+              onClick={() => navigate("/preview")}
               className="text-sm text-slate-400 light:text-slate-500 hover:text-white light:hover:text-slate-900 transition-colors duration-200"
             >
               Preview
-            </a>
+            </button>
 
           </div>
 
