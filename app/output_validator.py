@@ -1,64 +1,51 @@
 import re
+from typing import List, Tuple
+
+from app.dlp import PATTERNS
 
 
-def validate_output(response: str):
+def validate_output(response: str) -> Tuple[str, List[str]]:
     """
-    Validate and sanitize an LLM response before returning it to the user.
+    Validate an LLM response for sensitive-data leakage.
+
+    Uses the same DLP patterns as input sanitization so that
+    input and output protection remain consistent.
 
     Returns:
-        sanitized_response: str
-        issues: list[str]
+        sanitized_response: Redacted LLM response
+        issues: Detected leakage categories
     """
 
-    issues = []
+    sanitized_response = response
+    issues: List[str] = []
 
-    # Email Detection
-    email_pattern = r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}"
+    for name, pattern, replacement in PATTERNS:
 
-    if re.search(email_pattern, response):
-        issues.append("Email Leakage")
+        if re.search(pattern, sanitized_response):
 
-        response = re.sub(
-            email_pattern,
-            "[EMAIL]",
-            response
-        )
+            issues.append(f"{name} Leakage")
 
-    # API Key Detection
-    api_key_pattern = r"sk-[A-Za-z0-9]{10,}"
+            sanitized_response = re.sub(
+                pattern,
+                replacement,
+                sanitized_response
+            )
 
-    if re.search(api_key_pattern, response):
-        issues.append("API Key Leakage")
-
-        response = re.sub(
-            api_key_pattern,
-            "[API_KEY]",
-            response
-        )
-
-    # Credit Card Detection
-    credit_card_pattern = r"\b\d{13,16}\b"
-
-    if re.search(credit_card_pattern, response):
-        issues.append("Credit Card Leakage")
-
-        response = re.sub(
-            credit_card_pattern,
-            "[CREDIT_CARD]",
-            response
-        )
-
-    # System Prompt Leakage
+    # Detect system-prompt disclosure separately.
     system_prompt_pattern = r"\bsystem\s+prompt\b"
 
-    if re.search(system_prompt_pattern, response, re.IGNORECASE):
+    if re.search(
+        system_prompt_pattern,
+        sanitized_response,
+        re.IGNORECASE
+    ):
         issues.append("System Prompt Disclosure")
 
-        response = re.sub(
+        sanitized_response = re.sub(
             system_prompt_pattern,
             "[SYSTEM_PROMPT_REDACTED]",
-            response,
+            sanitized_response,
             flags=re.IGNORECASE
         )
 
-    return response, issues
+    return sanitized_response, issues
